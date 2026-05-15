@@ -1,13 +1,9 @@
-// ИСПРАВЛЕННЫЙ КОД ДЛЯ RENDER
-const express = require('express');
-const app = express();
-
-// --- ВАШИ ДАННЫЕ ДЛЯ ВХОДА В GNEZDO (ЗАМЕНИТЕ НА СВОИ!) ---
+// --- ВАШИ ДАННЫЕ ДЛЯ ВХОДА В GNEZDO ---
 const CONFIG = {
   LOGIN: "web@reklamy.ru",
   PASSWORD: "12jk6MRNFiyRIzroFl"
 };
-// ----------------------------------------------------------
+// --------------------------------------
 
 // Разрешаем доступ со всех доменов (для JetStat)
 app.use((req, res, next) => {
@@ -16,7 +12,6 @@ app.use((req, res, next) => {
 });
 
 app.get('/', async (req, res) => {
-  // Устанавливаем заголовок, чтобы браузер и JetStat поняли, что это CSV
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   
   const dateStart = req.query.date_start || '2026-03-01';
@@ -26,11 +21,10 @@ app.get('/', async (req, res) => {
   
   const sid = await getSid();
   if (!sid) {
-    return res.send('error,auth_failed');
+    return res.send('error;auth_failed');
   }
   
   const csv = await buildCSV(sid, dateStart, dateEnd);
-  // Добавляем BOM для корректной работы кириллицы
   res.send('\uFEFF' + csv);
 });
 
@@ -48,7 +42,8 @@ async function getSid() {
 }
 
 async function buildCSV(sid, startDateStr, endDateStr) {
-  const rows = [['date', 'id', 'title', 'url', 'views', 'views_real', 'clicks', 'money', 'batch_id']];
+  // Убрали url и batch_id, оставили 7 столбцов
+  const rows = [['date', 'id', 'title', 'views', 'views_real', 'clicks', 'money']];
   const startDate = new Date(startDateStr);
   const endDate = new Date(endDateStr);
   
@@ -62,10 +57,20 @@ async function buildCSV(sid, startDateStr, endDateStr) {
       
       if (data.list && data.list.length > 0) {
         for (const item of data.list) {
+          // Экранируем title: заменяем внутренние запятые на точку с запятой
+          // и удаляем все кавычки, чтобы не ломать CSV
+          let title = item.title || '';
+          title = title.replace(/,/g, ';');  // запятые внутри title → ;
+          title = title.replace(/"/g, '');    // удаляем кавычки
+          
           rows.push([
-            dateStr, item.id || '', item.title || '', item.url || '',
-            item.views || '0', item.views_real || '0',
-            item.clicks || '0', item.money || '0', item.batch_id || ''
+            dateStr,
+            item.id || '',
+            title,
+            item.views || '0',
+            item.views_real || '0',
+            item.clicks || '0',
+            item.money || '0'
           ]);
         }
       }
@@ -73,7 +78,8 @@ async function buildCSV(sid, startDateStr, endDateStr) {
       console.error(`Ошибка за ${dateStr}:`, e);
     }
   }
-  return rows.map(row => row.join(',')).join('\n');
+  // Разделитель теперь ; (точка с запятой)
+  return rows.map(row => row.join(';')).join('\n');
 }
 
 const port = process.env.PORT || 3000;
