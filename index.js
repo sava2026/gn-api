@@ -1,3 +1,7 @@
+// Подключаем библиотеку express для создания веб-сервера
+const express = require('express');
+const app = express(); 
+
 // --- ВАШИ ДАННЫЕ ДЛЯ ВХОДА В GNEZDO ---
 const CONFIG = {
   LOGIN: "web@reklamy.ru",
