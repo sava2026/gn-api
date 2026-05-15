@@ -9,7 +9,6 @@ const CONFIG = {
 };
 // --------------------------------------
 
-// Разрешаем доступ со всех доменов (для JetStat)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   next();
@@ -45,9 +44,23 @@ async function getSid() {
   }
 }
 
+// Функция для правильного экранирования CSV полей
+function escapeCSV(field) {
+  if (field === undefined || field === null) return '';
+  
+  const str = String(field);
+  // Если поле содержит разделитель (;), кавычку (") или перевод строки (\n)
+  if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+    // Заменяем кавычки на двойные кавычки (стандарт CSV)
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
 async function buildCSV(sid, startDateStr, endDateStr) {
-  // Убрали url и batch_id, оставили 7 столбцов
-  const rows = [['date', 'id', 'title', 'views', 'views_real', 'clicks', 'money']];
+  // Фиксированные заголовки
+  const headers = ['date', 'id', 'title', 'views', 'views_real', 'clicks', 'money'];
+  const rows = [];
   const startDate = new Date(startDateStr);
   const endDate = new Date(endDateStr);
   
@@ -61,17 +74,14 @@ async function buildCSV(sid, startDateStr, endDateStr) {
       
       if (data.list && data.list.length > 0) {
         for (const item of data.list) {
-          // Экранируем title: заменяем внутренние запятые на точку с запятой
-          // и удаляем все кавычки, чтобы не ломать CSV
-          let title = item.title || '';
-          title = title.replace(/,/g, ';');  // запятые внутри title → ;
-          title = title.replace(/"/g, '');    // удаляем кавычки
+          // Явно берем значение, даже если оно 0
+          const views = item.views !== undefined && item.views !== null ? String(item.views) : '0';
           
           rows.push([
             dateStr,
             item.id || '',
-            title,
-            item.views || '0',
+            escapeCSV(item.title || ''),
+            views,
             item.views_real || '0',
             item.clicks || '0',
             item.money || '0'
@@ -82,8 +92,13 @@ async function buildCSV(sid, startDateStr, endDateStr) {
       console.error(`Ошибка за ${dateStr}:`, e);
     }
   }
-  // Разделитель теперь ; (точка с запятой)
-  return rows.map(row => row.join(';')).join('\n');
+  
+  const csvLines = [
+    headers.join(';'),
+    ...rows.map(row => row.join(';'))
+  ];
+  
+  return csvLines.join('\n');
 }
 
 const port = process.env.PORT || 3000;
