@@ -16,8 +16,8 @@ app.use((req, res, next) => {
 app.get('/', async (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   
-  const dateStart = req.query.date_start || '2026-03-01';
-  const dateEnd = req.query.date_end || '2026-03-10';
+  const dateStart = req.query.date_start || '2026-08-01';
+  const dateEnd = req.query.date_end || '2026-08-10';
   
   console.log(`Запрос данных с ${dateStart} по ${dateEnd}`);
   
