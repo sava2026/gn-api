@@ -18,7 +18,7 @@ app.get('/', async (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   
   const dateStart = req.query.date_start || '2026-08-01';
-  const dateEnd = req.query.date_end || '2026-10-10';
+  const dateEnd = req.query.date_end || '2026-08-31';
   
   console.log(`Запрос данных с ${dateStart} по ${dateEnd}`);
   
